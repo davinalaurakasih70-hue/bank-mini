@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Nasabah;
+use App\Models\Rekening;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class NasabahController extends Controller
 {
@@ -29,16 +31,23 @@ class NasabahController extends Controller
             'no_hp' => 'nullable|max:20',
         ]);
 
-        Nasabah::create($request->only([
-            'nis',
-            'nama',
-            'kelas',
-            'alamat',
-            'no_hp',
-        ]));
+        DB::transaction(function () use ($request) {
+            $nasabah = Nasabah::create($request->only([
+                'nis', 'nama', 'kelas', 'alamat', 'no_hp',
+            ]));
+
+            $noRekening = '100' . str_pad($nasabah->id, 5, '0', STR_PAD_LEFT);
+
+            Rekening::create([
+                'nasabah_id' => $nasabah->id,
+                'no_rekening' => $noRekening,
+                'saldo' => 0,
+                'status' => 'aktif',
+            ]);
+        });
 
         return redirect()->route('nasabah.index')
-            ->with('success', 'Data nasabah berhasil ditambahkan!');
+            ->with('success', 'Data nasabah dan rekening berhasil ditambahkan!');
     }
 
     public function edit(Nasabah $nasabah)
@@ -57,11 +66,7 @@ class NasabahController extends Controller
         ]);
 
         $nasabah->update($request->only([
-            'nis',
-            'nama',
-            'kelas',
-            'alamat',
-            'no_hp',
+            'nis', 'nama', 'kelas', 'alamat', 'no_hp',
         ]));
 
         return redirect()->route('nasabah.index')
